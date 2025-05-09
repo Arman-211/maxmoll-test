@@ -15,8 +15,7 @@ class OrderController extends Controller
     /**
      * @param OrderService $orderService
      */
-    public function __construct(private OrderService $orderService) {}
-
+    public function __construct(private OrderService $orderService){}
 
     /**
      *  Список заказов с фильтрацией по статусу и пагинацией.
@@ -27,9 +26,7 @@ class OrderController extends Controller
     public function index(Request $request): JsonResponse
     {
         try {
-            $orders = Order::with(['items.product'])
-                ->when($request->status, fn($q) => $q->where('status', $request->status))
-                ->paginate($request->get('per_page', 10));
+            $orders = $this->orderService->getFilteredList($request->only(['status', 'per_page']));
 
             return response()->json($orders);
         } catch (\Throwable $e) {

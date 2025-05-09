@@ -5,7 +5,10 @@ namespace App\Services;
 use App\Models\Order;
 use App\Models\Stock;
 use App\Models\StockMovement;
+use Exception;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
+use InvalidArgumentException;
 
 class OrderService
 {
@@ -31,7 +34,7 @@ class OrderService
                     ->first();
 
                 if (!$stock || $stock->stock < $item['count']) {
-                    throw new \Exception('Недостаточно товара на складе.');
+                    throw new Exception('Недостаточно товара на складе.');
                 }
 
                 $stock->decrement('stock', $item['count']);
@@ -83,7 +86,7 @@ class OrderService
                     ->first();
 
                 if (!$stock || $stock->stock < $item['count']) {
-                    throw new \Exception('Недостаточно товара.');
+                    throw new Exception('Недостаточно товара.');
                 }
 
                 $stock->decrement('stock', $item['count']);
@@ -148,7 +151,7 @@ class OrderService
                     ->first();
 
                 if (!$stock || $stock->stock < $item->count) {
-                    throw new \Exception('Недостаточно товара для возобновления.');
+                    throw new Exception('Недостаточно товара для возобновления.');
                 }
 
                 $stock->decrement('stock', $item->count);
@@ -193,8 +196,22 @@ class OrderService
             'cancel' => $this->cancel($order),
             'resume' => $this->resume($order),
             'complete' => $this->complete($order),
-            default => throw new \InvalidArgumentException('Недопустимый статус действия.'),
+            default => throw new InvalidArgumentException('Недопустимый статус действия.'),
         };
     }
+
+    /**
+     * Получение списка заказов с фильтрацией и пагинацией.
+     *
+     * @param array $filters
+     * @return LengthAwarePaginator
+     */
+    public function getFilteredList(array $filters): LengthAwarePaginator
+    {
+        return Order::with(['items.product'])
+            ->when($filters['status'] ?? null, fn($q, $status) => $q->where('status', $status))
+            ->paginate($filters['per_page'] ?? 10);
+    }
+
 }
 
